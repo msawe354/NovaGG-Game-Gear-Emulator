@@ -1,4 +1,4 @@
-r[README.md](https://github.com/user-attachments/files/30104416/README.md)# NovaGG
+NovaGG Game Gear Emulator [README.md](https://github.com/user-attachments/files/30104416/README.md)# NovaGG
 
 Sega Game Gear emulator core, C++20. Same overall structure and feature
 set as the NovaGBA project (Core/CPU, Core/Memory, Core/GPU, Core/Sound,
