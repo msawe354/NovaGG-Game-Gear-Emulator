@@ -373,10 +373,49 @@ uint32_t Z80::ExecuteUnprefixed(uint8_t opcode) {
                 case 1: { uint8_t carry = a_ & 0x1; a_ = uint8_t((a_ >> 1) | (carry << 7)); f_ = uint8_t((f_ & (FLAG_S | FLAG_Z | FLAG_PV)) | carry); SetXY(a_); return 4; }
                 case 2: { uint8_t oldCarry = (f_ & FLAG_C) ? 1 : 0; uint8_t newCarry = (a_ & 0x80) ? 1 : 0; a_ = uint8_t((a_ << 1) | oldCarry); f_ = uint8_t((f_ & (FLAG_S | FLAG_Z | FLAG_PV)) | newCarry); SetXY(a_); return 4; }
                 case 3: { uint8_t oldCarry = (f_ & FLAG_C) ? 1 : 0; uint8_t newCarry = a_ & 0x1; a_ = uint8_t((a_ >> 1) | (oldCarry << 7)); f_ = uint8_t((f_ & (FLAG_S | FLAG_Z | FLAG_PV)) | newCarry); SetXY(a_); return 4; }
-                case 4: { uint8_t carry = f_ & FLAG_C; f_ = uint8_t((f_ & (FLAG_S | FLAG_Z | FLAG_PV)) | carry | FLAG_H); a_ = ~a_; SetXY(a_); f_ |= FLAG_N; return 4; }
-                case 5: { f_ = uint8_t((f_ & (FLAG_S | FLAG_Z | FLAG_PV)) | ((f_ & FLAG_C) ? 0 : FLAG_C)); SetXY(a_); return 4; }
-                case 6: { uint8_t carry = f_ & FLAG_C; f_ = uint8_t((f_ & (FLAG_S | FLAG_Z | FLAG_PV)) | (carry ^ FLAG_C)); SetXY(a_); return 4; }
-                case 7: { f_ = uint8_t((f_ & (FLAG_S | FLAG_Z | FLAG_PV)) | FLAG_C); SetXY(a_); return 4; }
+                case 4: { // DAA
+                    uint8_t a = a_;
+                    uint8_t adjusted = a;
+                    bool halfCarry = (f_ & FLAG_H) != 0;
+                    bool carryIn = (f_ & FLAG_C) != 0;
+                    bool subtract = (f_ & FLAG_N) != 0;
+
+                    if (!subtract) {
+                        if (halfCarry || (a & 0x0F) > 9) adjusted = uint8_t(adjusted + 0x06);
+                        if (carryIn || a > 0x99) adjusted = uint8_t(adjusted + 0x60);
+                    } else {
+                        if (halfCarry) adjusted = uint8_t(adjusted - 0x06);
+                        if (carryIn) adjusted = uint8_t(adjusted - 0x60);
+                    }
+
+                    uint8_t newF = uint8_t(f_ & FLAG_N);
+                    if (carryIn || a > 0x99) newF |= FLAG_C;
+                    newF |= uint8_t((a ^ adjusted) & FLAG_H);
+                    if (adjusted & 0x80) newF |= FLAG_S;
+                    if (adjusted == 0) newF |= FLAG_Z;
+                    if (Parity(adjusted)) newF |= FLAG_PV;
+                    f_ = newF;
+                    a_ = adjusted;
+                    SetXY(a_);
+                    return 4;
+                }
+                case 5: { // CPL
+                    f_ = uint8_t((f_ & (FLAG_S | FLAG_Z | FLAG_PV | FLAG_C)) | FLAG_H | FLAG_N);
+                    a_ = uint8_t(~a_);
+                    SetXY(a_);
+                    return 4;
+                }
+                case 6: { // SCF
+                    f_ = uint8_t((f_ & (FLAG_S | FLAG_Z | FLAG_PV)) | FLAG_C);
+                    SetXY(a_);
+                    return 4;
+                }
+                case 7: { // CCF
+                    uint8_t oldCarry = (f_ & FLAG_C) ? 1 : 0;
+                    f_ = uint8_t((f_ & (FLAG_S | FLAG_Z | FLAG_PV)) | (oldCarry ? FLAG_H : 0) | (oldCarry ? 0 : FLAG_C));
+                    SetXY(a_);
+                    return 4;
+                }
             }
         }
     }
