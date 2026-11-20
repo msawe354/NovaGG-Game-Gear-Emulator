@@ -58,7 +58,7 @@ bool GgSystem::SaveState(const std::string& path) {
     std::ofstream f(path, std::ios::binary);
     if (!f) return false;
     const uint32_t magic = 0x4E475347;
-    const uint32_t version = 1;
+    const uint32_t version = 2;
     f.write(reinterpret_cast<const char*>(&magic), sizeof(magic));
     f.write(reinterpret_cast<const char*>(&version), sizeof(version));
     bus_.Serialize(f);
@@ -74,7 +74,7 @@ bool GgSystem::LoadState(const std::string& path) {
     uint32_t magic = 0, version = 0;
     f.read(reinterpret_cast<char*>(&magic), sizeof(magic));
     f.read(reinterpret_cast<char*>(&version), sizeof(version));
-    if (magic != 0x4E475347 || version != 1) return false;
+    if (magic != 0x4E475347 || version != 2) return false;
     bus_.Deserialize(f);
     cpu_.Deserialize(f);
     vdp_.Deserialize(f);
