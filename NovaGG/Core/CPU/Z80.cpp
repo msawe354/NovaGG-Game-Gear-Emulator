@@ -22,6 +22,7 @@ void Z80::Reset() {
     pc_ = 0;
     i_ = r_ = 0;
     iff1_ = iff2_ = false;
+    eiDelay_ = 0;
     im_ = 0;
     halted_ = false;
     irqPending_ = false;
@@ -202,16 +203,20 @@ uint32_t Z80::Step() {
     }
 
     if (irqPending_ && iff1_) {
-        irqPending_ = false;
-        if (im_ == 2) {
-            uint16_t vector = uint16_t((i_ << 8) | irqDataBus_);
-            uint16_t addr = uint16_t(bus_.Read8(vector) | (bus_.Read8(uint16_t(vector + 1)) << 8));
-            EnterInterrupt(addr);
-            return 19;
+        if (eiDelay_ == 0) {
+            irqPending_ = false;
+            if (im_ == 2) {
+                uint16_t vector = uint16_t((i_ << 8) | irqDataBus_);
+                uint16_t addr = uint16_t(bus_.Read8(vector) | (bus_.Read8(uint16_t(vector + 1)) << 8));
+                EnterInterrupt(addr);
+                return 19;
+            }
+            EnterInterrupt(0x0038);
+            return 13;
         }
-        EnterInterrupt(0x0038);
-        return 13;
     }
+
+    if (eiDelay_ != 0) eiDelay_--;
 
     if (halted_) {
         return 4;
@@ -296,8 +301,8 @@ uint32_t Z80::ExecuteUnprefixed(uint8_t opcode) {
                     case 3: { uint8_t n = Fetch8(); a_ = bus_.ReadPort(n); return 11; }
                     case 4: { uint16_t v = Pop(); Push(GetHL()); SetHL(v); return 19; }
                     case 5: std::swap(d_, h_); std::swap(e_, l_); return 4;
-                    case 6: iff1_ = iff2_ = false; return 4;
-                    case 7: iff1_ = iff2_ = true; return 4;
+                    case 6: iff1_ = iff2_ = false; eiDelay_ = 0; return 4;
+                    case 7: iff1_ = iff2_ = true; eiDelay_ = 1; return 4;
                 }
                 break;
             case 4: { uint16_t addr = Fetch16(); if (CheckCondition(y)) { Push(pc_); pc_ = addr; return 17; } return 10; }
@@ -754,6 +759,7 @@ void Z80::Serialize(std::ostream& out) const {
     out.write(reinterpret_cast<const char*>(&r_), 1);
     out.write(reinterpret_cast<const char*>(&iff1_), sizeof(iff1_));
     out.write(reinterpret_cast<const char*>(&iff2_), sizeof(iff2_));
+    out.write(reinterpret_cast<const char*>(&eiDelay_), 1);
     out.write(reinterpret_cast<const char*>(&im_), 1);
     out.write(reinterpret_cast<const char*>(&halted_), sizeof(halted_));
 }
@@ -775,6 +781,7 @@ void Z80::Deserialize(std::istream& in) {
     in.read(reinterpret_cast<char*>(&r_), 1);
     in.read(reinterpret_cast<char*>(&iff1_), sizeof(iff1_));
     in.read(reinterpret_cast<char*>(&iff2_), sizeof(iff2_));
+    in.read(reinterpret_cast<char*>(&eiDelay_), 1);
     in.read(reinterpret_cast<char*>(&im_), 1);
     in.read(reinterpret_cast<char*>(&halted_), sizeof(halted_));
 }

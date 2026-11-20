@@ -55,6 +55,7 @@ private:
     uint16_t ix_ = 0, iy_ = 0, sp_ = 0, pc_ = 0;
     uint8_t i_ = 0, r_ = 0;
     bool iff1_ = false, iff2_ = false;
+    uint8_t eiDelay_ = 0;
     uint8_t im_ = 0;
     bool halted_ = false;
     bool irqPending_ = false;

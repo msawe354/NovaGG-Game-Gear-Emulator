@@ -65,5 +65,6 @@ was reused code-for-code, only the project shape.
 ```
 make
 make demo     # hand-assembled Z80 loop + VDP Mode 4 tile render smoke test
+make test     # Z80 interrupt timing regression tests
 ./NovaGG rom.gg
 ```
